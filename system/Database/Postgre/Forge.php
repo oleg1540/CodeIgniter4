@@ -45,6 +45,13 @@ class Forge extends \CodeIgniter\Database\Forge
 {
 
 	/**
+     * CHECK DATABASE EXIST statement
+     *
+     * @var string
+     */
+	protected $checkDatabaseExistStr = 'SELECT 1 FROM pg_database WHERE datname = %s';
+	
+	/**
 	 * DROP CONSTRAINT statement
 	 *
 	 * @var string
