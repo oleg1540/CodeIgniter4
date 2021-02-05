@@ -10,6 +10,9 @@ on:
     paths:
       - 'app/**'
       - 'system/**'
+      - '.github/workflows/test-rector.yml'
+      - composer.json
+      - 'rector.php'
   push:
     branches:
       - 'develop'
@@ -17,6 +20,9 @@ on:
     paths:
       - 'app/**'
       - 'system/**'
+      - '.github/workflows/test-rector.yml'
+      - composer.json
+      - 'rector.php'
 
 jobs:
   build:
@@ -53,7 +59,7 @@ jobs:
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --ansi --no-progress --no-suggest --no-interaction
+        run: composer update --ansi --no-interaction
 
       - name: Run static analysis
         run: vendor/bin/rector process --dry-run

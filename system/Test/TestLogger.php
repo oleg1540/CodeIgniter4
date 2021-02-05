@@ -1,10 +1,20 @@
-<?php namespace CodeIgniter\Test;
+<?php
+
+/**
+ * This file is part of the CodeIgniter 4 framework.
+ *
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace CodeIgniter\Test;
 
 use CodeIgniter\Log\Logger;
 
 class TestLogger extends Logger
 {
-
 	protected static $op_logs = [];
 
 	//--------------------------------------------------------------------
@@ -78,5 +88,4 @@ class TestLogger extends Logger
 	{
 		return $this->cleanFileNames($file);
 	}
-
 }

@@ -1,53 +1,26 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT	MIT License
- * @link       https://codeigniter.com
- * @since      Version 4.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace CodeIgniter\Database;
 
+use Closure;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\Events\Events;
+use Throwable;
 
 /**
  * Class BaseConnection
  */
 abstract class BaseConnection implements ConnectionInterface
 {
-
 	/**
 	 * Data Source Name / Connect string
 	 *
@@ -316,6 +289,13 @@ abstract class BaseConnection implements ConnectionInterface
 	 */
 	protected $aliasedTables = [];
 
+	/**
+	 * Query Class
+	 *
+	 * @var string
+	 */
+	protected $queryClass = 'CodeIgniter\\Database\\Query';
+
 	//--------------------------------------------------------------------
 
 	/**
@@ -329,6 +309,13 @@ abstract class BaseConnection implements ConnectionInterface
 		{
 			$this->$key = $value;
 		}
+
+		$queryClass = str_replace('Connection', 'Query', static::class);
+
+		if (class_exists($queryClass))
+		{
+			$this->queryClass = $queryClass;
+		}
 	}
 
 	//--------------------------------------------------------------------
@@ -337,7 +324,7 @@ abstract class BaseConnection implements ConnectionInterface
 	 * Initializes the database connection/settings.
 	 *
 	 * @return mixed|void
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function initialize()
 	{
@@ -361,7 +348,7 @@ abstract class BaseConnection implements ConnectionInterface
 			// Connect to the database and set the connection ID
 			$this->connID = $this->connect($this->pConnect);
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			log_message('error', 'Error connecting to the database: ' . $e->getMessage());
 		}
@@ -389,7 +376,7 @@ abstract class BaseConnection implements ConnectionInterface
 						// Try to connect
 						$this->connID = $this->connect($this->pConnect);
 					}
-					catch (\Throwable $e)
+					catch (Throwable $e)
 					{
 						log_message('error', 'Error connecting to the database: ' . $e->getMessage());
 					}
@@ -605,8 +592,6 @@ abstract class BaseConnection implements ConnectionInterface
 	 */
 	abstract protected function execute(string $sql);
 
-	//--------------------------------------------------------------------
-
 	/**
 	 * Orchestrates a query against the database. Queries must use
 	 * Database\Statement objects to store the query and build it.
@@ -621,9 +606,13 @@ abstract class BaseConnection implements ConnectionInterface
 	 * @param string  $queryClass
 	 *
 	 * @return BaseResult|Query|false
+	 *
+	 * @todo BC set $queryClass default as null in 4.1
 	 */
-	public function query(string $sql, $binds = null, bool $setEscapeFlags = true, string $queryClass = 'CodeIgniter\\Database\\Query')
+	public function query(string $sql, $binds = null, bool $setEscapeFlags = true, string $queryClass = '')
 	{
+		$queryClass = $queryClass ?: $this->queryClass;
+
 		if (empty($this->connID))
 		{
 			$this->initialize();
@@ -762,6 +751,7 @@ abstract class BaseConnection implements ConnectionInterface
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Start Transaction
 	 *
@@ -825,6 +815,7 @@ abstract class BaseConnection implements ConnectionInterface
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Begin Transaction
 	 *
@@ -977,12 +968,12 @@ abstract class BaseConnection implements ConnectionInterface
 	 *                     ->get();
 	 *           })
 	 *
-	 * @param \Closure $func
-	 * @param array    $options Passed to the prepare() method
+	 * @param Closure $func
+	 * @param array   $options Passed to the prepare() method
 	 *
 	 * @return BasePreparedQuery|null
 	 */
-	public function prepare(\Closure $func, array $options = [])
+	public function prepare(Closure $func, array $options = [])
 	{
 		if (empty($this->connID))
 		{
@@ -1288,7 +1279,7 @@ abstract class BaseConnection implements ConnectionInterface
 		// Avoid breaking functions and literal values inside queries
 		if (ctype_digit($item)
 			|| $item[0] === "'"
-			|| ( $this->escapeChar !== '"' && $item[0] === '"')
+			|| ($this->escapeChar !== '"' && $item[0] === '"')
 			|| strpos($item, '(') !== false)
 		{
 			return $item;
@@ -1335,7 +1326,7 @@ abstract class BaseConnection implements ConnectionInterface
 	 * @param string $table the table
 	 *
 	 * @return string
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function prefixTable(string $table = ''): string
 	{
@@ -1374,19 +1365,23 @@ abstract class BaseConnection implements ConnectionInterface
 		{
 			return array_map([&$this, 'escape'], $str);
 		}
-		else if (is_string($str) || ( is_object($str) && method_exists($str, '__toString')))
+
+		if (is_string($str) || (is_object($str) && method_exists($str, '__toString')))
 		{
 			return "'" . $this->escapeString($str) . "'";
 		}
-		else if (is_bool($str))
+
+		if (is_bool($str))
 		{
 			return ($str === false) ? 0 : 1;
 		}
-		else if (is_numeric($str) && $str < 0)
+
+		if (is_numeric($str) && $str < 0)
 		{
 			return "'{$str}'";
 		}
-		else if ($str === null)
+
+		if ($str === null)
 		{
 			return 'NULL';
 		}
@@ -1512,7 +1507,7 @@ abstract class BaseConnection implements ConnectionInterface
 	 *
 	 * @param  boolean $constrainByPrefix = FALSE
 	 * @return boolean|array
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function listTables(bool $constrainByPrefix = false)
 	{

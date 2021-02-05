@@ -1,5 +1,5 @@
 ###############
-Dates and Times
+Times and Dates
 ###############
 
 CodeIgniter provides a fully-localized, immutable, date/time class that is built on PHP's DateTime object, but uses the Intl
@@ -428,7 +428,7 @@ all identical::
 isBefore()
 ----------
 
-Checks if the passed in time is before the the current instance. The comparison is done against the UTC versions of
+Checks if the passed in time is before the current instance. The comparison is done against the UTC versions of
 both times::
 
     $time1 = Time::parse('January 10, 2017 21:50:00', 'America/Chicago');

@@ -1,52 +1,27 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT	MIT License
- * @link       https://codeigniter.com
- * @since      Version 4.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace CodeIgniter\Database;
 
 use CodeIgniter\Database\Exceptions\DatabaseException;
+use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
 
 /**
- * Class Forge
+ * The Forge class transforms migrations to executable
+ * SQL statements.
  */
 class Forge
 {
-
 	/**
 	 * The active database connection.
 	 *
@@ -190,9 +165,9 @@ class Forge
 	/**
 	 * Constructor.
 	 *
-	 * @param \CodeIgniter\Database\ConnectionInterface $db
+	 * @param BaseConnection $db
 	 */
-	public function __construct(ConnectionInterface $db)
+	public function __construct(BaseConnection $db)
 	{
 		$this->db = &$db;
 	}
@@ -218,7 +193,7 @@ class Forge
 	 * @param boolean $ifNotExists Whether to add IF NOT EXISTS condition
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function createDatabase(string $dbName, bool $ifNotExists = false): bool
 	{
@@ -228,6 +203,7 @@ class Forge
 			{
 				return true;
 			}
+
 			$ifNotExists = false;
 		}
 
@@ -238,25 +214,39 @@ class Forge
 				throw new DatabaseException('This feature is not available for the database you are using.');
 			}
 
-			return false;
+			return false; // @codeCoverageIgnore
 		}
 
-		if (! $this->db->query(sprintf($ifNotExists ? $this->createDatabaseIfStr : $this->createDatabaseStr, $dbName, $this->db->charset, $this->db->DBCollat)))
+		try
+		{
+			if (! $this->db->query(sprintf($ifNotExists ? $this->createDatabaseIfStr : $this->createDatabaseStr, $dbName, $this->db->charset, $this->db->DBCollat)))
+			{
+				// @codeCoverageIgnoreStart
+				if ($this->db->DBDebug)
+				{
+					throw new DatabaseException('Unable to create the specified database.');
+				}
+
+				return false;
+				// @codeCoverageIgnoreEnd
+			}
+
+			if (! empty($this->db->dataCache['db_names']))
+			{
+				$this->db->dataCache['db_names'][] = $dbName;
+			}
+
+			return true;
+		}
+		catch (Throwable $e)
 		{
 			if ($this->db->DBDebug)
 			{
-				throw new DatabaseException('Unable to create the specified database.');
+				throw new DatabaseException('Unable to create the specified database.', 0, $e);
 			}
 
-			return false;
+			return false; // @codeCoverageIgnore
 		}
-
-		if (! empty($this->db->dataCache['db_names']))
-		{
-			$this->db->dataCache['db_names'][] = $dbName;
-		}
-
-		return true;
 	}
 
 	//--------------------------------------------------------------------
@@ -267,7 +257,7 @@ class Forge
 	 * @param string $dbName
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	private function databaseExists(string $dbName): bool
 	{
@@ -292,7 +282,7 @@ class Forge
 	 * @param string $dbName
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function dropDatabase(string $dbName): bool
 	{
@@ -341,9 +331,9 @@ class Forge
 	 */
 	public function addKey($key, bool $primary = false, bool $unique = false)
 	{
-		if ($primary === true)
+		if ($primary)
 		{
-			foreach ((array)$key as $one)
+			foreach ((array) $key as $one)
 			{
 				$this->primaryKeys[] = $one;
 			}
@@ -351,9 +341,10 @@ class Forge
 		else
 		{
 			$this->keys[] = $key;
-			if ($unique === true)
+
+			if ($unique)
 			{
-				$this->uniqueKeys[] = ($c = count($this->keys)) ? $c - 1 : 0;
+				$this->uniqueKeys[] = count($this->keys) - 1;
 			}
 		}
 
@@ -416,7 +407,7 @@ class Forge
 			{
 				if (strpos($field, ' ') === false)
 				{
-					throw new \InvalidArgumentException('Field information is required for that operation.');
+					throw new InvalidArgumentException('Field information is required for that operation.');
 				}
 
 				$this->fields[] = $field;
@@ -442,8 +433,8 @@ class Forge
 	 * @param string $onUpdate
 	 * @param string $onDelete
 	 *
-	 * @return \CodeIgniter\Database\Forge
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @return Forge
+	 * @throws DatabaseException
 	 */
 	public function addForeignKey(string $fieldName = '', string $tableName = '', string $tableField = '', string $onUpdate = '', string $onDelete = '')
 	{
@@ -462,16 +453,14 @@ class Forge
 		return $this;
 	}
 
-	//--------------------------------------------------------------------
-
 	/**
 	 * Foreign Key Drop
 	 *
 	 * @param string $table       Table name
 	 * @param string $foreignName Foreign name
 	 *
-	 * @return boolean|\CodeIgniter\Database\BaseResult|\CodeIgniter\Database\Query|false|mixed
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @return boolean|BaseResult|Query|false|mixed
+	 * @throws DatabaseException
 	 */
 	public function dropForeignKey(string $table, string $foreignName)
 	{
@@ -492,6 +481,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Create Table
 	 *
@@ -500,20 +490,20 @@ class Forge
 	 * @param array   $attributes  Associative array of table attributes
 	 *
 	 * @return mixed
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function createTable(string $table, bool $ifNotExists = false, array $attributes = [])
 	{
 		if ($table === '')
 		{
-			throw new \InvalidArgumentException('A table name is required for that operation.');
+			throw new InvalidArgumentException('A table name is required for that operation.');
 		}
 
 		$table = $this->db->DBPrefix . $table;
 
-		if (count($this->fields) === 0)
+		if ($this->fields === [])
 		{
-			throw new \RuntimeException('Field information is required.');
+			throw new RuntimeException('Field information is required.');
 		}
 
 		$sql = $this->_createTable($table, $ifNotExists, $attributes);
@@ -555,6 +545,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Create Table
 	 *
@@ -643,7 +634,7 @@ class Forge
 	 * @param boolean $cascade   Whether to add an CASCADE condition
 	 *
 	 * @return mixed
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function dropTable(string $tableName, bool $ifExists = false, bool $cascade = false)
 	{
@@ -689,6 +680,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Drop Table
 	 *
@@ -723,6 +715,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Rename Table
 	 *
@@ -730,13 +723,13 @@ class Forge
 	 * @param string $newTableName New table name
 	 *
 	 * @return mixed
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function renameTable(string $tableName, string $newTableName)
 	{
 		if ($tableName === '' || $newTableName === '')
 		{
-			throw new \InvalidArgumentException('A table name is required for that operation.');
+			throw new InvalidArgumentException('A table name is required for that operation.');
 		}
 
 		if ($this->renameTableStr === false)
@@ -776,7 +769,7 @@ class Forge
 	 * @param string|array $field Column definition
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function addColumn(string $table, $field): bool
 	{
@@ -800,9 +793,9 @@ class Forge
 			return false;
 		}
 
-		for ($i = 0, $c = count($sqls); $i < $c; $i++)
+		foreach ($sqls as $i => $sql)
 		{
-			if ($this->db->query($sqls[$i]) === false)
+			if ($this->db->query($sql) === false)
 			{
 				return false;
 			}
@@ -812,6 +805,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Column Drop
 	 *
@@ -819,7 +813,7 @@ class Forge
 	 * @param string|array $columnName Column name Array or comma separated
 	 *
 	 * @return mixed
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function dropColumn(string $table, $columnName)
 	{
@@ -846,7 +840,7 @@ class Forge
 	 * @param string|array $field Column definition
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function modifyColumn(string $table, $field): bool
 	{
@@ -858,9 +852,9 @@ class Forge
 			$this->addField([$k => $field[$k]]);
 		}
 
-		if (count($this->fields) === 0)
+		if ($this->fields === [])
 		{
-			throw new \RuntimeException('Field information is required');
+			throw new RuntimeException('Field information is required');
 		}
 
 		$sqls = $this->_alterTable('CHANGE', $this->db->DBPrefix . $table, $this->_processFields());
@@ -877,9 +871,9 @@ class Forge
 
 		if ($sqls !== null)
 		{
-			for ($i = 0, $c = count($sqls); $i < $c; $i++)
+			foreach ($sqls as $i => $sql)
 			{
-				if ($this->db->query($sqls[$i]) === false)
+				if ($this->db->query($sql) === false)
 				{
 					return false;
 				}
@@ -890,6 +884,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * ALTER TABLE
 	 *
@@ -931,6 +926,7 @@ class Forge
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Process fields
 	 *
@@ -984,7 +980,7 @@ class Forge
 				}
 				elseif (isset($attributes['FIRST']))
 				{
-					$field['first'] = (bool)$attributes['FIRST'];
+					$field['first'] = (bool) $attributes['FIRST'];
 				}
 			}
 
@@ -1214,7 +1210,7 @@ class Forge
 			}
 		}
 
-		if (count($this->primaryKeys) > 0)
+		if ($this->primaryKeys !== [])
 		{
 			$sql .= ",\n\tCONSTRAINT " . $this->db->escapeIdentifiers('pk_' . $table)
 					. ' PRIMARY KEY(' . implode(', ', $this->db->escapeIdentifiers($this->primaryKeys)) . ')';
@@ -1238,7 +1234,7 @@ class Forge
 
 		for ($i = 0, $c = count($this->keys); $i < $c; $i++)
 		{
-			$this->keys[$i] = (array)$this->keys[$i];
+			$this->keys[$i] = (array) $this->keys[$i];
 
 			for ($i2 = 0, $c2 = count($this->keys[$i]); $i2 < $c2; $i2++)
 			{
@@ -1289,7 +1285,7 @@ class Forge
 			'SET DEFAULT',
 		];
 
-		if (count($this->foreignKeys) > 0)
+		if ($this->foreignKeys !== [])
 		{
 			foreach ($this->foreignKeys as $field => $fkey)
 			{
@@ -1326,5 +1322,4 @@ class Forge
 	{
 		$this->fields = $this->keys = $this->uniqueKeys = $this->primaryKeys = $this->foreignKeys = [];
 	}
-
 }

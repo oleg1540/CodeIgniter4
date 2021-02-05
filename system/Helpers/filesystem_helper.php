@@ -1,47 +1,16 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2008-2014 EllisLab, Inc. (https://ellislab.com/)
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT	MIT License
- * @link       https://codeigniter.com
- * @since      Version 1.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 /**
  * CodeIgniter File System Helpers
- *
- * @package CodeIgniter
  */
 // ------------------------------------------------------------------------
 
@@ -94,7 +63,7 @@ if (! function_exists('directory_map'))
 			closedir($fp);
 			return $fileData;
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			return [];
 		}
@@ -138,7 +107,7 @@ if (! function_exists('write_file'))
 
 			return is_int($result);
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			return false;
 		}
@@ -177,21 +146,19 @@ if (! function_exists('delete_files'))
 			) as $object)
 			{
 				$filename = $object->getFilename();
-
 				if (! $hidden && $filename[0] === '.')
 				{
 					continue;
 				}
-				elseif (! $htdocs || ! preg_match('/^(\.htaccess|index\.(html|htm|php)|web\.config)$/i', $filename))
+
+				if (! $htdocs || ! preg_match('/^(\.htaccess|index\.(html|htm|php)|web\.config)$/i', $filename))
 				{
 					$isDir = $object->isDir();
-
 					if ($isDir && $delDir)
 					{
 						@rmdir($object->getPathname());
 						continue;
 					}
-
 					if (! $isDir)
 					{
 						@unlink($object->getPathname());
@@ -201,7 +168,7 @@ if (! function_exists('delete_files'))
 
 			return true;
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			return false;
 		}
@@ -239,12 +206,12 @@ if (! function_exists('get_filenames'))
 				) as $name => $object)
 			{
 				$basename = pathinfo($name, PATHINFO_BASENAME);
-
 				if (! $hidden && $basename[0] === '.')
 				{
 					continue;
 				}
-				elseif ($includePath === false)
+
+				if ($includePath === false)
 				{
 					$files[] = $basename;
 				}
@@ -258,7 +225,7 @@ if (! function_exists('get_filenames'))
 				}
 			}
 		}
-		catch (\Throwable $e)
+		catch (Throwable $e)
 		{
 			return [];
 		}
@@ -320,7 +287,7 @@ if (! function_exists('get_dir_file_info'))
 				return $fileData;
 			}
 		}
-		catch (\Throwable $fe)
+		catch (Throwable $fe)
 		{
 			return [];
 		}
@@ -441,17 +408,17 @@ if (! function_exists('symbolic_permissions'))
 		// Owner
 		$symbolic .= (($perms & 0x0100) ? 'r' : '-')
 				. (($perms & 0x0080) ? 'w' : '-')
-				. (($perms & 0x0040) ? (($perms & 0x0800) ? 's' : 'x' ) : (($perms & 0x0800) ? 'S' : '-'));
+				. (($perms & 0x0040) ? (($perms & 0x0800) ? 's' : 'x') : (($perms & 0x0800) ? 'S' : '-'));
 
 		// Group
 		$symbolic .= (($perms & 0x0020) ? 'r' : '-')
 				. (($perms & 0x0010) ? 'w' : '-')
-				. (($perms & 0x0008) ? (($perms & 0x0400) ? 's' : 'x' ) : (($perms & 0x0400) ? 'S' : '-'));
+				. (($perms & 0x0008) ? (($perms & 0x0400) ? 's' : 'x') : (($perms & 0x0400) ? 'S' : '-'));
 
 		// World
 		$symbolic .= (($perms & 0x0004) ? 'r' : '-')
 				. (($perms & 0x0002) ? 'w' : '-')
-				. (($perms & 0x0001) ? (($perms & 0x0200) ? 't' : 'x' ) : (($perms & 0x0200) ? 'T' : '-'));
+				. (($perms & 0x0001) ? (($perms & 0x0200) ? 't' : 'x') : (($perms & 0x0200) ? 'T' : '-'));
 
 		return $symbolic;
 	}

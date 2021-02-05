@@ -1,7 +1,18 @@
 <?php
 
+use Rector\CodeQuality\Rector\For_\ForToForeachRector;
+use Rector\CodeQuality\Rector\FuncCall\SimplifyStrposLowerRector;
+use Rector\CodeQuality\Rector\If_\CombineIfRector;
+use Rector\CodeQuality\Rector\Return_\SimplifyUselessVariableRector;
 use Rector\Core\Configuration\Option;
+use Rector\Core\ValueObject\PhpVersion;
+use Rector\EarlyReturn\Rector\Foreach_\ChangeNestedForeachIfsToEarlyContinueRector;
+use Rector\EarlyReturn\Rector\If_\ChangeIfElseValueAssignToEarlyReturnRector;
+use Rector\Performance\Rector\FuncCall\CountArrayToEmptyArrayComparisonRector;
+use Rector\Php73\Rector\FuncCall\ArrayKeyFirstLastRector;
+use Rector\SOLID\Rector\If_\RemoveAlwaysElseRector;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Utils\Rector\PassStrictParameterToFunctionParameterRector;
 use Utils\Rector\UnderscoreToCamelCaseVariableNameRector;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -11,9 +22,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 	$parameters->set(Option::PATHS, [__DIR__ . '/app', __DIR__ . '/system']);
 
 	// is there a file you need to skip?
-	$parameters->set(Option::EXCLUDE_PATHS, [
+	$parameters->set(Option::SKIP, [
 		__DIR__ . '/app/Views',
-		__DIR__ . '/system/Autoloader/Autoloader.php',
 		__DIR__ . '/system/Debug/Toolbar/Views/toolbar.tpl.php',
 		__DIR__ . '/system/ThirdParty',
 	]);
@@ -24,6 +34,21 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 		__DIR__ . '/system/Test/bootstrap.php',
 	]);
 
+	// auto import fully qualified class names
+	$parameters->set(Option::AUTO_IMPORT_NAMES, true);
+	$parameters->set(Option::ENABLE_CACHE, true);
+	$parameters->set(Option::PHP_VERSION_FEATURES, PhpVersion::PHP_73);
+
 	$services = $containerConfigurator->services();
 	$services->set(UnderscoreToCamelCaseVariableNameRector::class);
+	$services->set(SimplifyUselessVariableRector::class);
+	$services->set(RemoveAlwaysElseRector::class);
+	$services->set(PassStrictParameterToFunctionParameterRector::class);
+	$services->set(CountArrayToEmptyArrayComparisonRector::class);
+	$services->set(ForToForeachRector::class);
+	$services->set(ChangeNestedForeachIfsToEarlyContinueRector::class);
+	$services->set(ChangeIfElseValueAssignToEarlyReturnRector::class);
+	$services->set(ArrayKeyFirstLastRector::class);
+	$services->set(SimplifyStrposLowerRector::class);
+	$services->set(CombineIfRector::class);
 };

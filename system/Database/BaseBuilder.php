@@ -1,40 +1,12 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT	MIT License
- * @link       https://codeigniter.com
- * @since      Version 4.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace CodeIgniter\Database;
@@ -42,6 +14,7 @@ namespace CodeIgniter\Database;
 use Closure;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\Database\Exceptions\DataException;
+use InvalidArgumentException;
 
 /**
  * Class BaseBuilder
@@ -50,12 +23,10 @@ use CodeIgniter\Database\Exceptions\DataException;
  * Database-specific Builders might need to override
  * certain methods to make them work.
  *
- * @package CodeIgniter\Database
- * @mixin   \CodeIgniter\Model
+ * @mixin \CodeIgniter\Model
  */
 class BaseBuilder
 {
-
 	/**
 	 * Reset DELETE data flag
 	 *
@@ -185,6 +156,15 @@ class BaseBuilder
 	protected $db;
 
 	/**
+	 * Name of the primary table for this instance.
+	 * Tracked separately because $QBFrom gets escaped
+	 * and prefixed.
+	 *
+	 * @var string
+	 */
+	protected $tableName;
+
+	/**
 	 * ORDER BY random keyword
 	 *
 	 * @var array
@@ -285,6 +265,7 @@ class BaseBuilder
 
 		$this->db = $db;
 
+		$this->tableName = $tableName;
 		$this->from($tableName);
 
 		if (! empty($options))
@@ -318,13 +299,25 @@ class BaseBuilder
 	 *
 	 * @param boolean $mode Mode to set
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function testMode(bool $mode = true)
 	{
 		$this->testMode = $mode;
 
 		return $this;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Gets the name of the primary table.
+	 *
+	 * @return string
+	 */
+	public function getTable(): string
+	{
+		return $this->tableName;
 	}
 
 	//--------------------------------------------------------------------
@@ -350,7 +343,7 @@ class BaseBuilder
 	 *
 	 * @param boolean $ignore
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function ignore(bool $ignore = true)
 	{
@@ -369,7 +362,7 @@ class BaseBuilder
 	 * @param string|array $select
 	 * @param boolean      $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function select($select = '*', bool $escape = null)
 	{
@@ -418,7 +411,7 @@ class BaseBuilder
 	 * @param string $select The field
 	 * @param string $alias  An alias
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function selectMax(string $select = '', string $alias = '')
 	{
@@ -435,7 +428,7 @@ class BaseBuilder
 	 * @param string $select The field
 	 * @param string $alias  An alias
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function selectMin(string $select = '', string $alias = '')
 	{
@@ -452,7 +445,7 @@ class BaseBuilder
 	 * @param string $select The field
 	 * @param string $alias  An alias
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function selectAvg(string $select = '', string $alias = '')
 	{
@@ -469,7 +462,7 @@ class BaseBuilder
 	 * @param string $select The field
 	 * @param string $alias  An alias
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function selectSum(string $select = '', string $alias = '')
 	{
@@ -486,7 +479,7 @@ class BaseBuilder
 	 * @param string $select The field
 	 * @param string $alias  An alias
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function selectCount(string $select = '', string $alias = '')
 	{
@@ -507,9 +500,9 @@ class BaseBuilder
 	 * @param string $alias
 	 * @param string $type
 	 *
-	 * @return BaseBuilder
-	 * @throws \CodeIgniter\Database\Exceptions\DataException
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @return $this
+	 * @throws DataException
+	 * @throws DatabaseException
 	 */
 	protected function maxMinAvgSum(string $select = '', string $alias = '', string $type = 'MAX')
 	{
@@ -573,7 +566,7 @@ class BaseBuilder
 	 *
 	 * @param boolean $val
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function distinct(bool $val = true)
 	{
@@ -592,7 +585,7 @@ class BaseBuilder
 	 * @param mixed   $from      can be a string or array
 	 * @param boolean $overwrite Should we remove the first table existing?
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function from($from, bool $overwrite = false)
 	{
@@ -641,7 +634,7 @@ class BaseBuilder
 	 * @param string  $type   The type of join
 	 * @param boolean $escape Whether not to try to escape identifiers
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function join(string $table, string $cond, string $type = '', bool $escape = null)
 	{
@@ -701,8 +694,9 @@ class BaseBuilder
 			foreach ($conditions as $i => $condition)
 			{
 				$operator = $this->getOperator($condition);
-				$cond    .= $joints[$i];
-				$cond    .= preg_match("/(\(*)?([\[\]\w\.'-]+)" . preg_quote($operator) . '(.*)/i', $condition, $match) ? $match[1] . $this->db->protectIdentifiers($match[2]) . $operator . $this->db->protectIdentifiers($match[3]) : $condition;
+
+				$cond .= $joints[$i];
+				$cond .= preg_match("/(\(*)?([\[\]\w\.'-]+)" . preg_quote($operator) . '(.*)/i', $condition, $match) ? $match[1] . $this->db->protectIdentifiers($match[2]) . $operator . $this->db->protectIdentifiers($match[3]) : $condition;
 			}
 		}
 
@@ -730,7 +724,7 @@ class BaseBuilder
 	 * @param mixed   $value
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function where($key, $value = null, bool $escape = null)
 	{
@@ -749,7 +743,7 @@ class BaseBuilder
 	 * @param mixed   $value
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orWhere($key, $value = null, bool $escape = null)
 	{
@@ -757,6 +751,7 @@ class BaseBuilder
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * WHERE, HAVING
 	 *
@@ -771,7 +766,7 @@ class BaseBuilder
 	 * @param string  $type
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	protected function whereHaving(string $qbKey, $key, $value = null, string $type = 'AND ', bool $escape = null)
 	{
@@ -857,7 +852,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function whereIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -876,7 +871,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orWhereIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -895,7 +890,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function whereNotIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -914,7 +909,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orWhereNotIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -933,7 +928,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function havingIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -952,7 +947,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orHavingIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -971,7 +966,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function havingNotIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -990,7 +985,7 @@ class BaseBuilder
 	 * @param array|string|Closure $values The values searched on, or anonymous function with subquery
 	 * @param boolean              $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orHavingNotIn(string $key = null, $values = null, bool $escape = null)
 	{
@@ -1013,9 +1008,9 @@ class BaseBuilder
 	 * @param  string             $type
 	 * @param  boolean            $escape
 	 * @param  string             $clause (Internal use only)
-	 * @throws \InvalidArgumentException
+	 * @throws InvalidArgumentException
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	protected function _whereIn(string $key = null, $values = null, bool $not = false, string $type = 'AND ', bool $escape = null, string $clause = 'QBWhere')
 	{
@@ -1023,7 +1018,7 @@ class BaseBuilder
 		{
 			if (CI_DEBUG)
 			{
-				throw new \InvalidArgumentException(sprintf('%s() expects $key to be a non-empty string', debug_backtrace(0, 2)[1]['function']));
+				throw new InvalidArgumentException(sprintf('%s() expects $key to be a non-empty string', debug_backtrace(0, 2)[1]['function']));
 			}
 			// @codeCoverageIgnoreStart
 			return $this;
@@ -1034,7 +1029,7 @@ class BaseBuilder
 		{
 			if (CI_DEBUG)
 			{
-				throw new \InvalidArgumentException(sprintf('%s() expects $values to be of type array or closure', debug_backtrace(0, 2)[1]['function']));
+				throw new InvalidArgumentException(sprintf('%s() expects $values to be of type array or closure', debug_backtrace(0, 2)[1]['function']));
 			}
 			// @codeCoverageIgnoreStart
 			return $this;
@@ -1089,7 +1084,7 @@ class BaseBuilder
 	 * @param boolean $escape
 	 * @param boolean $insensitiveSearch IF true, will force a case-insensitive search
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function like($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1110,7 +1105,7 @@ class BaseBuilder
 	 * @param boolean $escape
 	 * @param boolean $insensitiveSearch IF true, will force a case-insensitive search
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function notLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1131,7 +1126,7 @@ class BaseBuilder
 	 * @param boolean $escape
 	 * @param boolean $insensitiveSearch IF true, will force a case-insensitive search
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1152,7 +1147,7 @@ class BaseBuilder
 	 * @param boolean $escape
 	 * @param boolean $insensitiveSearch IF true, will force a case-insensitive search
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orNotLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1172,7 +1167,7 @@ class BaseBuilder
 	 * @param string  $side
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function havingLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1192,7 +1187,7 @@ class BaseBuilder
 	 * @param string  $side
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function notHavingLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1212,7 +1207,7 @@ class BaseBuilder
 	 * @param string  $side
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orHavingLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1232,7 +1227,7 @@ class BaseBuilder
 	 * @param string  $side
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orNotHavingLike($field, string $match = '', string $side = 'both', bool $escape = null, bool $insensitiveSearch = false)
 	{
@@ -1262,7 +1257,7 @@ class BaseBuilder
 	 * @param boolean $insensitiveSearch IF true, will force a case-insensitive search
 	 * @param string  $clause            (Internal use only)
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	protected function _like($field, string $match = '', string $type = 'AND ', string $side = 'both', string $not = '', bool $escape = null, bool $insensitiveSearch = false, string $clause = 'QBWhere')
 	{
@@ -1324,15 +1319,15 @@ class BaseBuilder
 	/**
 	 * Platform independent LIKE statement builder.
 	 *
-	 * @param string  $prefix
-	 * @param string  $column
-	 * @param string  $not
-	 * @param string  $bind
-	 * @param boolean $insensitiveSearch
+	 * @param string|null $prefix
+	 * @param string      $column
+	 * @param string|null $not
+	 * @param string      $bind
+	 * @param boolean     $insensitiveSearch
 	 *
 	 * @return string     $like_statement
 	 */
-	protected function _like_statement(string $prefix = null, string $column, string $not = null, string $bind, bool $insensitiveSearch = false): string
+	protected function _like_statement(?string $prefix, string $column, ?string $not, string $bind, bool $insensitiveSearch = false): string
 	{
 		$likeStatement = "{$prefix} {$column} {$not} LIKE :{$bind}:";
 
@@ -1349,7 +1344,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function groupStart()
 	{
@@ -1361,7 +1356,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group, but ORs the group
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orGroupStart()
 	{
@@ -1373,7 +1368,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group, but NOTs the group
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function notGroupStart()
 	{
@@ -1385,7 +1380,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group, but OR NOTs the group
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orNotGroupStart()
 	{
@@ -1397,7 +1392,7 @@ class BaseBuilder
 	/**
 	 * Ends a query group
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function groupEnd()
 	{
@@ -1409,7 +1404,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group for HAVING clause.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function havingGroupStart()
 	{
@@ -1421,7 +1416,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group for HAVING clause, but ORs the group.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orHavingGroupStart()
 	{
@@ -1433,7 +1428,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group for HAVING clause, but NOTs the group.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function notHavingGroupStart()
 	{
@@ -1445,7 +1440,7 @@ class BaseBuilder
 	/**
 	 * Starts a query group for HAVING clause, but OR NOTs the group.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orNotHavingGroupStart()
 	{
@@ -1457,7 +1452,7 @@ class BaseBuilder
 	/**
 	 * Ends a query group for HAVING clause.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function havingGroupEnd()
 	{
@@ -1473,7 +1468,7 @@ class BaseBuilder
 	 * @param string $type
 	 * @param string $clause
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	protected function groupStartPrepare(string $not = '', string $type = 'AND ', string $clause = 'QBWhere')
 	{
@@ -1498,13 +1493,13 @@ class BaseBuilder
 	 *
 	 * @param string $clause
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	protected function groupEndPrepare(string $clause = 'QBWhere')
 	{
 		$this->QBWhereGroupStarted = false;
 		$where                     = [
-			'condition' => str_repeat(' ', $this->QBWhereGroupCount -- ) . ')',
+			'condition' => str_repeat(' ', $this->QBWhereGroupCount--) . ')',
 			'escape'    => false,
 		];
 
@@ -1547,7 +1542,7 @@ class BaseBuilder
 	 * @param string|array $by
 	 * @param boolean      $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function groupBy($by, bool $escape = null)
 	{
@@ -1587,7 +1582,7 @@ class BaseBuilder
 	 * @param mixed        $value
 	 * @param boolean      $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function having($key, $value = null, bool $escape = null)
 	{
@@ -1605,7 +1600,7 @@ class BaseBuilder
 	 * @param mixed        $value
 	 * @param boolean      $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orHaving($key, $value = null, bool $escape = null)
 	{
@@ -1621,7 +1616,7 @@ class BaseBuilder
 	 * @param string  $direction ASC, DESC or RANDOM
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function orderBy(string $orderBy, string $direction = '', bool $escape = null)
 	{
@@ -1684,12 +1679,12 @@ class BaseBuilder
 	/**
 	 * LIMIT
 	 *
-	 * @param integer $value  LIMIT value
-	 * @param integer $offset OFFSET value
+	 * @param integer|null $value  LIMIT value
+	 * @param integer|null $offset OFFSET value
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
-	public function limit(int $value = null, ?int $offset = 0)
+	public function limit(?int $value = null, ?int $offset = 0)
 	{
 		if (! is_null($value))
 		{
@@ -1711,7 +1706,7 @@ class BaseBuilder
 	 *
 	 * @param integer $offset OFFSET value
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function offset(int $offset)
 	{
@@ -1750,7 +1745,7 @@ class BaseBuilder
 	 * @param string              $value  Field value, if $key is a single field
 	 * @param boolean             $escape Whether to escape values and identifiers
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function set($key, ?string $value = '', bool $escape = null)
 	{
@@ -1887,7 +1882,7 @@ class BaseBuilder
 	 * "Count All" query
 	 *
 	 * Generates a platform-specific query string that counts all records in
-	 * the specified database
+	 * the particular table
 	 *
 	 * @param boolean $reset Are we want to clear query builder values?
 	 *
@@ -1996,6 +1991,7 @@ class BaseBuilder
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Get compiled 'where' condition string
 	 *
@@ -2007,6 +2003,7 @@ class BaseBuilder
 	{
 		return $this->QBWhere;
 	}
+
 	//--------------------------------------------------------------------
 
 	/**
@@ -2147,7 +2144,7 @@ class BaseBuilder
 	 * @param string  $value
 	 * @param boolean $escape
 	 *
-	 * @return BaseBuilder|null
+	 * @return $this|null
 	 */
 	public function setInsertBatch($key, string $value = '', bool $escape = null)
 	{
@@ -2166,7 +2163,7 @@ class BaseBuilder
 		foreach ($key as $row)
 		{
 			$row = $this->objectToArray($row);
-			if (count(array_diff($keys, array_keys($row))) > 0 || count(array_diff(array_keys($row), $keys)) > 0)
+			if (array_diff($keys, array_keys($row)) !== [] || array_diff(array_keys($row), $keys) !== [])
 			{
 				// batch function above returns an error on an empty array
 				$this->QBSet[] = [];
@@ -2228,8 +2225,6 @@ class BaseBuilder
 
 		return $this->compileFinalQuery($sql);
 	}
-
-	//--------------------------------------------------------------------
 
 	/**
 	 * Insert
@@ -2321,8 +2316,6 @@ class BaseBuilder
 	{
 		return 'INSERT ' . $this->compileIgnore('insert') . 'INTO ' . $table . ' (' . implode(', ', $keys) . ') VALUES (' . implode(', ', $unescapedKeys) . ')';
 	}
-
-	//--------------------------------------------------------------------
 
 	/**
 	 * Replace
@@ -2525,7 +2518,7 @@ class BaseBuilder
 	 * chosen to be update.
 	 *
 	 * @return boolean
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	protected function validateUpdate(): bool
 	{
@@ -2555,7 +2548,7 @@ class BaseBuilder
 	 * @param integer $batchSize The size of the batch to run
 	 *
 	 * @return mixed    Number of rows affected, SQL string, or FALSE on failure
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function updateBatch(array $set = null, string $index = null, int $batchSize = 100)
 	{
@@ -2681,8 +2674,8 @@ class BaseBuilder
 	 * @param string       $index
 	 * @param boolean      $escape
 	 *
-	 * @return BaseBuilder|null
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @return $this|null
+	 * @throws DatabaseException
 	 */
 	public function setUpdateBatch($key, string $index = '', bool $escape = null)
 	{
@@ -2806,14 +2799,14 @@ class BaseBuilder
 	 */
 	public function getCompiledDelete(bool $reset = true): string
 	{
-		$table = $this->QBFrom[0];
-
-		$sql = $this->delete($table, null, $reset);
+		$sql = $this->testMode()->delete('', null, $reset);
+		$this->testMode(false);
 
 		return $this->compileFinalQuery($sql);
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Delete
 	 *
@@ -2824,7 +2817,7 @@ class BaseBuilder
 	 * @param boolean $resetData
 	 *
 	 * @return mixed
-	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
+	 * @throws DatabaseException
 	 */
 	public function delete($where = '', int $limit = null, bool $resetData = true)
 	{
@@ -2969,6 +2962,7 @@ class BaseBuilder
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Compile the SELECT statement
 	 *
@@ -2988,7 +2982,7 @@ class BaseBuilder
 		}
 		else
 		{
-			$sql = ( ! $this->QBDistinct) ? 'SELECT ' : 'SELECT DISTINCT ';
+			$sql = (! $this->QBDistinct) ? 'SELECT ' : 'SELECT DISTINCT ';
 
 			if (empty($this->QBSelect))
 			{
@@ -3061,6 +3055,7 @@ class BaseBuilder
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Compile WHERE, HAVING statements
 	 *
@@ -3169,8 +3164,9 @@ class BaseBuilder
 					continue;
 				}
 
-				$groupBy = ($groupBy['escape'] === false ||
-						$this->isLiteral($groupBy['field'])) ? $groupBy['field'] : $this->db->protectIdentifiers($groupBy['field']);
+				$groupBy = ($groupBy['escape'] === false || $this->isLiteral($groupBy['field']))
+					? $groupBy['field']
+					: $this->db->protectIdentifiers($groupBy['field']);
 			}
 
 			return "\nGROUP BY " . implode(', ', $this->QBGroupBy);
@@ -3301,8 +3297,10 @@ class BaseBuilder
 	{
 		$str = trim($str);
 
-		if (empty($str) || ctype_digit($str) || (string) (float) $str === $str ||
-				in_array(strtoupper($str), ['TRUE', 'FALSE'], true)
+		if (empty($str)
+			|| ctype_digit($str)
+			|| (string) (float) $str === $str
+			|| in_array(strtoupper($str), ['TRUE', 'FALSE'], true)
 		)
 		{
 			return true;
@@ -3325,7 +3323,7 @@ class BaseBuilder
 	 *
 	 * Publicly-visible method to reset the QB values.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	public function resetQuery()
 	{
@@ -3336,6 +3334,7 @@ class BaseBuilder
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Resets the query builder values.  Called by the get() function
 	 *
@@ -3498,7 +3497,7 @@ class BaseBuilder
 	/**
 	 * Returns a clone of a Base Builder with reset query builder values.
 	 *
-	 * @return BaseBuilder
+	 * @return $this
 	 */
 	protected function cleanClone()
 	{

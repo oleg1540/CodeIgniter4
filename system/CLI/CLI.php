@@ -1,45 +1,20 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT	MIT License
- * @link       https://codeigniter.com
- * @since      Version 4.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace CodeIgniter\CLI;
 
 use CodeIgniter\CLI\Exceptions\CLIException;
+use Config\Services;
+use InvalidArgumentException;
+use Throwable;
 
 /**
  * Set of static methods useful for CLI request handling.
@@ -58,12 +33,9 @@ use CodeIgniter\CLI\Exceptions\CLIException;
  * The wait() method is mostly testable, as long as you don't give it
  * an argument of "0".
  * These have been flagged to ignore for code coverage purposes.
- *
- * @package CodeIgniter\CLI
  */
 class CLI
 {
-
 	/**
 	 * Is the readline library on the system?
 	 *
@@ -249,16 +221,26 @@ class CLI
 	 *
 	 * @param string       $field      Output "field" question
 	 * @param string|array $options    String to a default value, array to a list of options (the first option will be the default value)
-	 * @param string       $validation Validation rules
+	 * @param string|array $validation Validation rules
 	 *
 	 * @return string The user input
 	 *
 	 * @codeCoverageIgnore
 	 */
-	public static function prompt(string $field, $options = null, string $validation = null): string
+	public static function prompt(string $field, $options = null, $validation = null): string
 	{
 		$extraOutput = '';
 		$default     = '';
+
+		if ($validation && ! is_array($validation) && ! is_string($validation))
+		{
+			throw new InvalidArgumentException('$rules can only be of type string|array');
+		}
+
+		if (! is_array($validation))
+		{
+			$validation = $validation ? explode('|', $validation) : [];
+		}
 
 		if (is_string($options))
 		{
@@ -279,9 +261,8 @@ class CLI
 			}
 			else
 			{
-				$extraOutput = ' [' . $extraOutputDefault . ', ' . implode(', ', $opts) . ']';
-				$validation .= '|in_list[' . implode(',', $options) . ']';
-				$validation  = trim($validation, '|');
+				$extraOutput  = ' [' . $extraOutputDefault . ', ' . implode(', ', $opts) . ']';
+				$validation[] = 'in_list[' . implode(',', $options) . ']';
 			}
 
 			$default = $options[0];
@@ -292,7 +273,7 @@ class CLI
 		// Read the input from keyboard.
 		$input = trim(static::input()) ?: $default;
 
-		if (isset($validation))
+		if ($validation)
 		{
 			while (! static::validate($field, $input, $validation))
 			{
@@ -308,20 +289,25 @@ class CLI
 	/**
 	 * Validate one prompt "field" at a time
 	 *
-	 * @param string $field Prompt "field" output
-	 * @param string $value Input value
-	 * @param string $rules Validation rules
+	 * @param string       $field Prompt "field" output
+	 * @param string       $value Input value
+	 * @param string|array $rules Validation rules
 	 *
 	 * @return boolean
 	 *
 	 * @codeCoverageIgnore
 	 */
-	protected static function validate(string $field, string $value, string $rules): bool
+	protected static function validate(string $field, string $value, $rules): bool
 	{
 		$label      = $field;
 		$field      = 'temp';
-		$validation = \Config\Services::validation(null, false);
-		$validation->setRule($field, $label, $rules);
+		$validation = Services::validation(null, false);
+		$validation->setRules([
+			$field => [
+				'label' => $label,
+				'rules' => $rules,
+			],
+		]);
 		$validation->run([$field => $value]);
 
 		if ($validation->hasError($field))
@@ -609,7 +595,7 @@ class CLI
 
 		$string = strtr($string, ["\033[4m" => '', "\033[0m" => '']);
 
-		return mb_strlen($string);
+		return mb_strwidth($string);
 	}
 
 	//--------------------------------------------------------------------
@@ -726,50 +712,60 @@ class CLI
 	 */
 	public static function generateDimensions()
 	{
-		if (static::isWindows())
+		try
 		{
-			// Shells such as `Cygwin` and `Git bash` returns incorrect values
-			// when executing `mode CON`, so we use `tput` instead
-			// @codeCoverageIgnoreStart
-			if (($shell = getenv('SHELL')) && preg_match('/(?:bash|zsh)(?:\.exe)?$/', $shell) || getenv('TERM'))
+			if (static::isWindows())
 			{
-				static::$height = (int) exec('tput lines');
-				static::$width  = (int) exec('tput cols');
-			}
-			else
-			{
-				$return = -1;
-				$output = [];
-				exec('mode CON', $output, $return);
-
-				if ($return === 0 && $output)
+				// Shells such as `Cygwin` and `Git bash` returns incorrect values
+				// when executing `mode CON`, so we use `tput` instead
+				// @codeCoverageIgnoreStart
+				if (($shell = getenv('SHELL')) && preg_match('/(?:bash|zsh)(?:\.exe)?$/', $shell) || getenv('TERM'))
 				{
+					static::$height = (int) exec('tput lines');
+					static::$width  = (int) exec('tput cols');
+				}
+				else
+				{
+					$return = -1;
+					$output = [];
+					exec('mode CON', $output, $return);
+
 					// Look for the next lines ending in ": <number>"
 					// Searching for "Columns:" or "Lines:" will fail on non-English locales
-					if (preg_match('/:\s*(\d+)\n[^:]+:\s*(\d+)\n/', implode("\n", $output), $matches))
+					if ($return === 0 && $output && preg_match('/:\s*(\d+)\n[^:]+:\s*(\d+)\n/', implode("\n", $output), $matches))
 					{
 						static::$height = (int) $matches[1];
 						static::$width  = (int) $matches[2];
 					}
 				}
-			}
-			// @codeCoverageIgnoreEnd
-		}
-		else
-		{
-			if (($size = exec('stty size')) && preg_match('/(\d+)\s+(\d+)/', $size, $matches))
-			{
-				static::$height = (int) $matches[1];
-				static::$width  = (int) $matches[2];
+				// @codeCoverageIgnoreEnd
 			}
 			else
 			{
-				// @codeCoverageIgnoreStart
-				static::$height = (int) exec('tput lines');
-				static::$width  = (int) exec('tput cols');
-				// @codeCoverageIgnoreEnd
+				if (($size = exec('stty size')) && preg_match('/(\d+)\s+(\d+)/', $size, $matches))
+				{
+					static::$height = (int) $matches[1];
+					static::$width  = (int) $matches[2];
+				}
+				else
+				{
+					// @codeCoverageIgnoreStart
+					static::$height = (int) exec('tput lines');
+					static::$width  = (int) exec('tput cols');
+					// @codeCoverageIgnoreEnd
+				}
 			}
 		}
+		// @codeCoverageIgnoreStart
+		catch (Throwable $e)
+		{
+			// Reset the dimensions so that the default values will be returned later.
+			// Then let the developer know of the error.
+			static::$height = null;
+			static::$width  = null;
+			log_message('error', $e->getMessage());
+		}
+		// @codeCoverageIgnoreEnd
 	}
 
 	//--------------------------------------------------------------------
@@ -798,7 +794,7 @@ class CLI
 			$thisStep   = abs($thisStep);
 			$totalSteps = $totalSteps < 1 ? 1 : $totalSteps;
 
-			$percent = intval(($thisStep / $totalSteps) * 100);
+			$percent = (int) (($thisStep / $totalSteps) * 100);
 			$step    = (int) round($percent / 10);
 
 			// Write the progress bar
@@ -813,6 +809,7 @@ class CLI
 	}
 
 	//--------------------------------------------------------------------
+
 	/**
 	 * Takes a string and writes it to the command line, wrapping to a maximum
 	 * width. If no maximum width is specified, will wrap to the window's max
@@ -883,7 +880,7 @@ class CLI
 	 */
 	protected static function parseCommandLine()
 	{
-		$args = $_SERVER['argv'];
+		$args = $_SERVER['argv'] ?? [];
 		array_shift($args); // scrap invoking program
 		$optionValue = false;
 

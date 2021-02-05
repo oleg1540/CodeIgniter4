@@ -1,52 +1,25 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT	MIT License
- * @link       https://codeigniter.com
- * @since      Version 4.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace CodeIgniter\HTTP;
 
 use CodeIgniter\HTTP\Exceptions\HTTPException;
+use Config\App;
+use InvalidArgumentException;
 
 /**
  * Abstraction for a uniform resource identifier (URI).
  */
 class URI
 {
-
 	/**
 	 * Sub-delimiters used in query strings and fragments.
 	 *
@@ -174,7 +147,7 @@ class URI
 	 *
 	 * @param string $uri
 	 *
-	 * @throws \InvalidArgumentException
+	 * @throws InvalidArgumentException
 	 */
 	public function __construct(string $uri = null)
 	{
@@ -307,14 +280,11 @@ class URI
 			$authority = $this->getUserInfo() . '@' . $authority;
 		}
 
-		if (! empty($this->port) && ! $ignorePort)
+		// Don't add port if it's a standard port for
+		// this scheme
+		if (! empty($this->port) && ! $ignorePort && $this->port !== $this->defaultPorts[$this->scheme])
 		{
-			// Don't add port if it's a standard port for
-			// this scheme
-			if ($this->port !== $this->defaultPorts[$this->scheme])
-			{
-				$authority .= ':' . $this->port;
-			}
+			$authority .= ':' . $this->port;
 		}
 
 		$this->showPassword = false;
@@ -596,7 +566,7 @@ class URI
 		// If hosted in a sub-folder, we will have additional
 		// segments that show up prior to the URI path we just
 		// grabbed from the request, so add it on if necessary.
-		$config   = config(\Config\App::class);
+		$config   = config(App::class);
 		$baseUri  = new self($config->baseURL);
 		$basePath = trim($baseUri->getPath(), '/') . '/';
 		$path     = $this->getPath();
@@ -865,7 +835,7 @@ class URI
 	 *
 	 * @param array $query
 	 *
-	 * @return \CodeIgniter\HTTP\URI
+	 * @return URI
 	 */
 	public function setQueryArray(array $query)
 	{
@@ -1040,14 +1010,11 @@ class URI
 		}
 
 		// Port
-		if (isset($parts['port']))
+		if (isset($parts['port']) && ! is_null($parts['port']))
 		{
-			if (! is_null($parts['port']))
-			{
-				// Valid port numbers are enforced by earlier parse_url or setPort()
-				$port       = $parts['port'];
-				$this->port = $port;
-			}
+			// Valid port numbers are enforced by earlier parse_url or setPort()
+			$port       = $parts['port'];
+			$this->port = $port;
 		}
 
 		if (isset($parts['pass']))
@@ -1074,7 +1041,7 @@ class URI
 	 *
 	 * @param string $uri
 	 *
-	 * @return \CodeIgniter\HTTP\URI
+	 * @return URI
 	 */
 	public function resolveRelativeURI(string $uri)
 	{
@@ -1212,7 +1179,7 @@ class URI
 			{
 				array_pop($output);
 			}
-			else if ($segment !== '.' && $segment !== '')
+			elseif ($segment !== '.' && $segment !== '')
 			{
 				array_push($output, $segment);
 			}

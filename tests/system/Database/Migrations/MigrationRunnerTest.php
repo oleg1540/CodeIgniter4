@@ -1,8 +1,14 @@
-<?php namespace CodeIgniter\Database;
+<?php
 
+namespace CodeIgniter\Database\Migrations;
+
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Database\Config;
+use CodeIgniter\Database\MigrationRunner;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Exceptions\ConfigException;
 use CodeIgniter\Test\CIDatabaseTestCase;
+use Config\Database;
 use Config\Migrations;
 use Config\Services;
 use org\bovigo\vfs\vfsStream;
@@ -32,7 +38,7 @@ class MigrationRunnerTest extends CIDatabaseTestCase
 
 	public function testLoadsDefaultDatabaseWhenNoneSpecified()
 	{
-		$dbConfig = new \Config\Database();
+		$dbConfig = new Database();
 		$runner   = new MigrationRunner($this->config);
 
 		$db = $this->getPrivateProperty($runner, 'db');
@@ -62,9 +68,7 @@ class MigrationRunnerTest extends CIDatabaseTestCase
 	public function testGetHistory()
 	{
 		$runner = new MigrationRunner($this->config);
-
-		$tableMaker = $this->getPrivateMethodInvoker($runner, 'ensureTable');
-		$tableMaker();
+		$runner->ensureTable();
 
 		$history = [
 			'id'        => 4,
@@ -76,17 +80,28 @@ class MigrationRunnerTest extends CIDatabaseTestCase
 			'batch'     => 1,
 		];
 
+		if ($this->db->DBDriver === 'SQLSRV')
+		{
+			$this->db->simpleQuery('SET IDENTITY_INSERT ' . $this->db->prefixTable('migrations') . ' ON');
+		}
+
 		$this->hasInDatabase('migrations', $history);
 
 		$this->assertEquals($history, (array) $runner->getHistory()[0]);
+
+		if ($this->db->DBDriver === 'SQLSRV')
+		{
+			$this->db->simpleQuery('SET IDENTITY_INSERT ' . $this->db->prefixTable('migrations') . ' OFF');
+
+			$db = $this->getPrivateProperty($runner, 'db');
+			$db->table('migrations')->delete(['id' => 4]);
+		}
 	}
 
 	public function testGetHistoryReturnsEmptyArrayWithNoResults()
 	{
 		$runner = new MigrationRunner($this->config);
-
-		$tableMaker = $this->getPrivateMethodInvoker($runner, 'ensureTable');
-		$tableMaker();
+		$runner->ensureTable();
 
 		$this->assertEquals([], $runner->getHistory());
 	}
@@ -233,7 +248,7 @@ class MigrationRunnerTest extends CIDatabaseTestCase
 
 	public function testVersionReturnsUpDownSuccess()
 	{
-		$forge = \Config\Database::forge();
+		$forge = Database::forge();
 		$forge->dropTable('foo', true);
 
 		$config = $this->config;

@@ -2,6 +2,12 @@
 
 namespace Config;
 
+use CodeIgniter\Cache\Handlers\DummyHandler;
+use CodeIgniter\Cache\Handlers\FileHandler;
+use CodeIgniter\Cache\Handlers\MemcachedHandler;
+use CodeIgniter\Cache\Handlers\PredisHandler;
+use CodeIgniter\Cache\Handlers\RedisHandler;
+use CodeIgniter\Cache\Handlers\WincacheHandler;
 use CodeIgniter\Config\BaseConfig;
 
 class Cache extends BaseConfig
@@ -40,6 +46,8 @@ class Cache extends BaseConfig
 	 * system.
 	 *
 	 * @var string
+	 *
+	 * @deprecated Use the driver-specific variant under $file
 	 */
 	public $storePath = WRITEPATH . 'cache/';
 
@@ -73,6 +81,20 @@ class Cache extends BaseConfig
 	 * @var string
 	 */
 	public $prefix = '';
+
+	/**
+	 * --------------------------------------------------------------------------
+	 * File settings
+	 * --------------------------------------------------------------------------
+	 * Your file storage preferences can be specified below, if you are using
+	 * the File driver.
+	 *
+	 * @var array<string, string|int|null>
+	 */
+	public $file = [
+		'storePath' => WRITEPATH . 'cache/',
+		'mode'      => 0640,
+	];
 
 	/**
 	 * -------------------------------------------------------------------------
@@ -120,11 +142,11 @@ class Cache extends BaseConfig
 	 * @var array<string, string>
 	 */
 	public $validHandlers = [
-		'dummy'     => \CodeIgniter\Cache\Handlers\DummyHandler::class,
-		'file'      => \CodeIgniter\Cache\Handlers\FileHandler::class,
-		'memcached' => \CodeIgniter\Cache\Handlers\MemcachedHandler::class,
-		'predis'    => \CodeIgniter\Cache\Handlers\PredisHandler::class,
-		'redis'     => \CodeIgniter\Cache\Handlers\RedisHandler::class,
-		'wincache'  => \CodeIgniter\Cache\Handlers\WincacheHandler::class,
+		'dummy'     => DummyHandler::class,
+		'file'      => FileHandler::class,
+		'memcached' => MemcachedHandler::class,
+		'predis'    => PredisHandler::class,
+		'redis'     => RedisHandler::class,
+		'wincache'  => WincacheHandler::class,
 	];
 }

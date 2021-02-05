@@ -1,46 +1,21 @@
 <?php
 
 /**
- * CodeIgniter
+ * This file is part of the CodeIgniter 4 framework.
  *
- * An open source application development framework for PHP
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
  *
- * This content is released under the MIT License (MIT)
- *
- * Copyright (c) 2014-2019 British Columbia Institute of Technology
- * Copyright (c) 2019-2020 CodeIgniter Foundation
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * @package    CodeIgniter
- * @author     CodeIgniter Dev Team
- * @copyright  2019-2020 CodeIgniter Foundation
- * @license    https://opensource.org/licenses/MIT    MIT License
- * @link       https://codeigniter.com
- * @since      Version 4.0.0
- * @filesource
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
+
+use CodeIgniter\HTTP\URI;
+use CodeIgniter\Router\Exceptions\RouterException;
+use Config\App;
+use Config\Services;
 
 /**
  * CodeIgniter URL Helpers
- *
- * @package CodeIgniter
  */
 
 if (! function_exists('site_url'))
@@ -48,13 +23,13 @@ if (! function_exists('site_url'))
 	/**
 	 * Return a site URL to use in views
 	 *
-	 * @param mixed            $uri       URI string or array of URI segments
-	 * @param string|null      $protocol
-	 * @param \Config\App|null $altConfig Alternate configuration to use
+	 * @param mixed       $uri       URI string or array of URI segments
+	 * @param string|null $protocol
+	 * @param App|null    $altConfig Alternate configuration to use
 	 *
 	 * @return string
 	 */
-	function site_url($uri = '', string $protocol = null, \Config\App $altConfig = null): string
+	function site_url($uri = '', string $protocol = null, App $altConfig = null): string
 	{
 		// convert segment array to string
 		if (is_array($uri))
@@ -63,7 +38,7 @@ if (! function_exists('site_url'))
 		}
 
 		// use alternate config if provided, else default one
-		$config = $altConfig ?? config(\Config\App::class);
+		$config = $altConfig ?? config(App::class);
 
 		$fullPath = rtrim(base_url(), '/') . '/';
 
@@ -77,7 +52,7 @@ if (! function_exists('site_url'))
 			$fullPath .= '/' . $uri;
 		}
 
-		$url = new \CodeIgniter\HTTP\URI($fullPath);
+		$url = new URI($fullPath);
 
 		// allow the scheme to be over-ridden; else, use default
 		if (! empty($protocol))
@@ -112,7 +87,7 @@ if (! function_exists('base_url'))
 		// We should be using the configured baseURL that the user set;
 		// otherwise get rid of the path, because we have
 		// no way of knowing the intent...
-		$config = \Config\Services::request()->config;
+		$config = Services::request()->config;
 
 		// If baseUrl does not have a trailing slash it won't resolve
 		// correctly for users hosting in a subfolder.
@@ -120,7 +95,7 @@ if (! function_exists('base_url'))
 			? rtrim($config->baseURL, '/ ') . '/'
 			: $config->baseURL;
 
-		$url = new \CodeIgniter\HTTP\URI($baseUrl);
+		$url = new URI($baseUrl);
 		unset($config);
 
 		// Merge in the path set by the user, if any
@@ -131,7 +106,7 @@ if (! function_exists('base_url'))
 
 		// If the scheme wasn't provided, check to
 		// see if it was a secure request
-		if (empty($protocol) && \Config\Services::request()->isSecure())
+		if (empty($protocol) && Services::request()->isSecure())
 		{
 			$protocol = 'https';
 		}
@@ -157,11 +132,11 @@ if (! function_exists('current_url'))
 	 *
 	 * @param boolean $returnObject True to return an object instead of a strong
 	 *
-	 * @return string|\CodeIgniter\HTTP\URI
+	 * @return string|URI
 	 */
 	function current_url(bool $returnObject = false)
 	{
-		$uri = clone \Config\Services::request()->uri;
+		$uri = clone Services::request()->uri;
 
 		// Since we're basing off of the IncomingRequest URI,
 		// we are guaranteed to have a host based on our own configs.
@@ -181,18 +156,18 @@ if (! function_exists('previous_url'))
 	 *
 	 * @param boolean $returnObject
 	 *
-	 * @return \CodeIgniter\HTTP\URI|mixed|string
+	 * @return URI|mixed|string
 	 */
 	function previous_url(bool $returnObject = false)
 	{
 		// Grab from the session first, if we have it,
 		// since it's more reliable and safer.
 		// Otherwise, grab a sanitized version from $_SERVER.
-		$referer = $_SESSION['_ci_previous_url'] ?? \Config\Services::request()->getServer('HTTP_REFERER', FILTER_SANITIZE_URL);
+		$referer = $_SESSION['_ci_previous_url'] ?? Services::request()->getServer('HTTP_REFERER', FILTER_SANITIZE_URL);
 
 		$referer = $referer ?? site_url('/');
 
-		return $returnObject ? new \CodeIgniter\HTTP\URI($referer) : $referer;
+		return $returnObject ? new URI($referer) : $referer;
 	}
 }
 
@@ -211,7 +186,7 @@ if (! function_exists('uri_string'))
 	 */
 	function uri_string(bool $relative = false): string
 	{
-		$request = \Config\Services::request();
+		$request = Services::request();
 		$uri     = $request->uri;
 
 		// An absolute path is equivalent to getPath()
@@ -237,13 +212,13 @@ if (! function_exists('index_page'))
 	 *
 	 * Returns the "index_page" from your config file
 	 *
-	 * @param  \Config\App|null $altConfig Alternate configuration to use
+	 * @param  App|null $altConfig Alternate configuration to use
 	 * @return string
 	 */
-	function index_page(\Config\App $altConfig = null): string
+	function index_page(App $altConfig = null): string
 	{
 		// use alternate config if provided, else default one
-		$config = $altConfig ?? config(\Config\App::class);
+		$config = $altConfig ?? config(App::class);
 
 		return $config->indexPage;
 	}
@@ -258,17 +233,17 @@ if (! function_exists('anchor'))
 	 *
 	 * Creates an anchor based on the local URL.
 	 *
-	 * @param mixed            $uri        URI string or array of URI segments
-	 * @param string           $title      The link title
-	 * @param mixed            $attributes Any attributes
-	 * @param \Config\App|null $altConfig  Alternate configuration to use
+	 * @param mixed    $uri        URI string or array of URI segments
+	 * @param string   $title      The link title
+	 * @param mixed    $attributes Any attributes
+	 * @param App|null $altConfig  Alternate configuration to use
 	 *
 	 * @return string
 	 */
-	function anchor($uri = '', string $title = '', $attributes = '', \Config\App $altConfig = null): string
+	function anchor($uri = '', string $title = '', $attributes = '', App $altConfig = null): string
 	{
 		// use alternate config if provided, else default one
-		$config = $altConfig ?? config(\Config\App::class);
+		$config = $altConfig ?? config(App::class);
 
 		$siteUrl = is_array($uri) ? site_url($uri, null, $config) : (preg_match('#^(\w+:)?//#i', $uri) ? $uri : site_url($uri, null, $config));
 		// eliminate trailing slash
@@ -298,17 +273,17 @@ if (! function_exists('anchor_popup'))
 	 * Creates an anchor based on the local URL. The link
 	 * opens a new window based on the attributes specified.
 	 *
-	 * @param string           $uri        the URL
-	 * @param string           $title      the link title
-	 * @param mixed            $attributes any attributes
-	 * @param \Config\App|null $altConfig  Alternate configuration to use
+	 * @param string   $uri        the URL
+	 * @param string   $title      the link title
+	 * @param mixed    $attributes any attributes
+	 * @param App|null $altConfig  Alternate configuration to use
 	 *
 	 * @return string
 	 */
-	function anchor_popup($uri = '', string $title = '', $attributes = false, \Config\App $altConfig = null): string
+	function anchor_popup($uri = '', string $title = '', $attributes = false, App $altConfig = null): string
 	{
 		// use alternate config if provided, else default one
-		$config = $altConfig ?? config(\Config\App::class);
+		$config = $altConfig ?? config(App::class);
 
 		$siteUrl = preg_match('#^(\w+:)?//#i', $uri) ? $uri : site_url($uri, '', $config);
 		$siteUrl = rtrim($siteUrl, '/');
@@ -472,9 +447,9 @@ if (! function_exists('safe_mailto'))
 		$output = '<script type="text/javascript">'
 				. 'var l=new Array();';
 
-		for ($i = 0, $c = count($x); $i < $c; $i ++)
+		foreach ($x as $i => $value)
 		{
-			$output .= 'l[' . $i . "] = '" . $x[$i] . "';";
+			$output .= 'l[' . $i . "] = '" . $value . "';";
 		}
 
 		return $output . ('for (var i = l.length-1; i >= 0; i=i-1) {'
@@ -547,26 +522,31 @@ if (! function_exists('auto_link'))
 if (! function_exists('prep_url'))
 {
 	/**
-	 * Prep URL - Simply adds the http:// part if no scheme is included.
+	 * Prep URL - Simply adds the http:// or https:// part if no scheme is included.
 	 *
 	 * Formerly used URI, but that does not play nicely with URIs missing
 	 * the scheme.
 	 *
-	 * @param  string $str the URL
+	 * @param  string  $str    the URL
+	 * @param  boolean $secure set true if you want to force https://
 	 * @return string
 	 */
-	function prep_url(string $str = ''): string
+	function prep_url(string $str = '', bool $secure = false): string
 	{
-		if ($str === 'http://' || $str === '')
+		if (in_array($str, ['http://', 'https://', '//', ''], true))
 		{
 			return '';
 		}
 
-		$url = parse_url($str);
-
-		if (! $url || ! isset($url['scheme']))
+		if (parse_url($str, PHP_URL_SCHEME) === null)
 		{
-			return 'http://' . $str;
+			$str = 'http://' . ltrim($str, '/');
+		}
+
+		// force replace http:// with https://
+		if ($secure)
+		{
+			$str = preg_replace('/^(?:http):/i', 'https:', $str);
 		}
 
 		return $str;
@@ -650,7 +630,7 @@ if (! function_exists('url_to'))
 	 * @param string $controller
 	 * @param mixed  ...$args
 	 *
-	 * @throws \CodeIgniter\Router\Exceptions\RouterException
+	 * @throws RouterException
 	 *
 	 * @return string
 	 */
@@ -662,10 +642,10 @@ if (! function_exists('url_to'))
 
 			if (isset($explode[1]))
 			{
-				throw new \CodeIgniter\Router\Exceptions\RouterException(lang('HTTP.controllerNotFound', [$explode[0], $explode[1]]));
+				throw RouterException::forControllerNotFound($explode[0], $explode[1]);
 			}
 
-			throw new \CodeIgniter\Router\Exceptions\RouterException(lang('HTTP.invalidRoute', [$controller]));
+			throw RouterException::forInvalidRoute($controller);
 		}
 
 		return site_url($route);
@@ -692,6 +672,6 @@ if (! function_exists('url_is'))
 		$path        = '/' . trim(str_replace('*', '(\S)*', $path), '/ ');
 		$currentPath = '/' . trim(uri_string(true), '/ ');
 
-		return (bool)preg_match("|^{$path}$|", $currentPath, $matches);
+		return (bool) preg_match("|^{$path}$|", $currentPath, $matches);
 	}
 }

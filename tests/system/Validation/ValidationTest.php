@@ -444,15 +444,44 @@ class ValidationTest extends \CodeIgniter\Test\CIUnitTestCase
 		$config->baseURL = 'http://example.com/';
 
 		$request = new IncomingRequest($config, new URI(), $rawstring, new UserAgent());
-		$request->setMethod('patch');
 
 		$rules = [
 			'role' => 'required|min_length[5]',
 		];
-		$this->validation->withRequest($request)
-				->run($data);
-
+		$this->validation->withRequest($request->withMethod('patch'))->run($data);
 		$this->assertEquals([], $this->validation->getErrors());
+	}
+
+	//--------------------------------------------------------------------
+
+	public function testJsonInput()
+	{
+		$data = [
+			'username' => 'admin001',
+			'role'     => 'administrator',
+			'usepass'  => 0,
+		];
+		$json = json_encode($data);
+
+		$_SERVER['CONTENT_TYPE'] = 'application/json';
+
+		$config          = new App();
+		$config->baseURL = 'http://example.com/';
+
+		$request = new IncomingRequest($config, new URI(), $json, new UserAgent());
+
+		$rules     = [
+			'role' => 'required|min_length[5]',
+		];
+		$validated = $this->validation
+			->withRequest($request->withMethod('patch'))
+			->setRules($rules)
+			->run();
+
+		$this->assertTrue($validated);
+		$this->assertEquals([], $this->validation->getErrors());
+
+		unset($_SERVER['CONTENT_TYPE']);
 	}
 
 	//--------------------------------------------------------------------
@@ -669,11 +698,9 @@ class ValidationTest extends \CodeIgniter\Test\CIUnitTestCase
 		$config->baseURL = 'http://example.com/';
 
 		$request = new IncomingRequest($config, new URI(), http_build_query($body), new UserAgent());
-		$request->setMethod('post');
 
 		$this->validation->setRules($rules);
-		$this->validation->withRequest($request)
-			->run($body);
+		$this->validation->withRequest($request->withMethod('post'))->run($body);
 		$this->assertEquals($results, $this->validation->getErrors());
 	}
 
@@ -754,15 +781,13 @@ class ValidationTest extends \CodeIgniter\Test\CIUnitTestCase
 		];
 
 		$request = new IncomingRequest($config, new URI(), 'php://input', new UserAgent());
-		$request->setMethod('post');
 
 		$this->validation->setRules([
 			'id_user.*'   => 'numeric',
 			'name_user.*' => 'alpha_numeric',
 		]);
 
-		$this->validation->withRequest($request)
-			->run();
+		$this->validation->withRequest($request->withMethod('post'))->run();
 		$this->assertEquals([], $this->validation->getErrors());
 	}
 
@@ -785,15 +810,13 @@ class ValidationTest extends \CodeIgniter\Test\CIUnitTestCase
 		];
 
 		$request = new IncomingRequest($config, new URI(), 'php://input', new UserAgent());
-		$request->setMethod('post');
 
 		$this->validation->setRules([
 			'id_user.*'   => 'numeric',
 			'name_user.*' => 'alpha',
 		]);
 
-		$this->validation->withRequest($request)
-			->run();
+		$this->validation->withRequest($request->withMethod('post'))->run();
 		$this->assertEquals([
 			'id_user.*'   => 'The id_user.* field must contain only numbers.',
 			'name_user.*' => 'The name_user.* field may only contain alphabetical characters.',
@@ -812,14 +835,12 @@ class ValidationTest extends \CodeIgniter\Test\CIUnitTestCase
 		];
 
 		$request = new IncomingRequest($config, new URI(), 'php://input', new UserAgent());
-		$request->setMethod('post');
 
 		$this->validation->setRules([
 			'id_user' => 'numeric',
 		]);
 
-		$this->validation->withRequest($request)
-			->run();
+		$this->validation->withRequest($request->withMethod('post'))->run();
 		$this->assertEquals([
 			'id_user' => 'The id_user field must contain only numbers.',
 		], $this->validation->getErrors());
