@@ -276,13 +276,7 @@ class IncomingRequest extends Request
 		{
 			return true;
 		}
-
-		if ($this->hasHeader('Front-End-Https') && ! empty($this->header('Front-End-Https')->getValue()) && strtolower($this->header('Front-End-Https')->getValue()) !== 'off')
-		{
-			return true;
-		}
-
-		return false;
+		return $this->hasHeader('Front-End-Https') && ! empty($this->header('Front-End-Https')->getValue()) && strtolower($this->header('Front-End-Https')->getValue()) !== 'off';
 	}
 
 	//--------------------------------------------------------------------
@@ -300,7 +294,7 @@ class IncomingRequest extends Request
 	 */
 	public function getVar($index = null, $filter = null, $flags = null)
 	{
-		if ($this->isJSON())
+		if (strpos($this->getHeaderLine('Content-Type'), 'application/json') !== false)
 		{
 			if (is_null($index))
 			{
@@ -725,7 +719,7 @@ class IncomingRequest extends Request
 		if (isset($_SERVER['SCRIPT_NAME'][0]) && pathinfo($_SERVER['SCRIPT_NAME'], PATHINFO_EXTENSION) === 'php')
 		{
 			// strip the script name from the beginning of the URI
-			if (strpos($uri, $_SERVER['SCRIPT_NAME']) === 0)
+			if (strpos($uri, $_SERVER['SCRIPT_NAME']) === 0 && strpos($uri, '/index.php') === 0)
 			{
 				$uri = (string) substr($uri, strlen($_SERVER['SCRIPT_NAME']));
 			}

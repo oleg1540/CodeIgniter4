@@ -42,6 +42,13 @@ trait GeneratorTrait
 	protected $template;
 
 	/**
+	 * Language string key for required class names.
+	 *
+	 * @var string
+	 */
+	protected $classNameLang = '';
+
+	/**
 	 * Whether to require class name.
 	 *
 	 * @internal
@@ -58,6 +65,15 @@ trait GeneratorTrait
 	 * @var boolean
 	 */
 	private $sortImports = true;
+
+	/**
+	 * Whether the `--suffix` option has any effect.
+	 *
+	 * @internal
+	 *
+	 * @var boolean
+	 */
+	private $enabledSuffixing = true;
 
 	/**
 	 * The params array for easy access by other methods.
@@ -195,7 +211,9 @@ trait GeneratorTrait
 		if (is_null($class) && $this->hasClassName)
 		{
 			// @codeCoverageIgnoreStart
-			$class = CLI::prompt(lang('CLI.generator.className'), null, 'required');
+			$nameLang = $this->classNameLang ?: 'CLI.generator.className.default';
+
+			$class = CLI::prompt(lang($nameLang), null, 'required');
 			CLI::newLine();
 			// @codeCoverageIgnoreEnd
 		}
@@ -206,7 +224,7 @@ trait GeneratorTrait
 		$class     = strtolower($class);
 		$class     = strpos($class, $component) !== false ? str_replace($component, ucfirst($component), $class) : $class;
 
-		if ($this->getOption('suffix') && ! strripos($class, $component))
+		if ($this->enabledSuffixing && $this->getOption('suffix') && ! strripos($class, $component))
 		{
 			$class .= ucfirst($component);
 		}
@@ -308,12 +326,10 @@ trait GeneratorTrait
 
 		if (! $base = reset($base))
 		{
-			// @codeCoverageIgnoreStart
 			CLI::error(lang('CLI.namespaceNotDefined', [$namespace]), 'light_gray', 'red');
 			CLI::newLine();
 
 			return '';
-			// @codeCoverageIgnoreEnd
 		}
 
 		$base = realpath($base) ?: $base;
@@ -346,6 +362,20 @@ trait GeneratorTrait
 	protected function setSortImports(bool $sortImports)
 	{
 		$this->sortImports = $sortImports;
+
+		return $this;
+	}
+
+	/**
+	 * Allows child generators to modify the internal `$enabledSuffixing` flag.
+	 *
+	 * @param boolean $enabledSuffixing
+	 *
+	 * @return $this
+	 */
+	protected function setEnabledSuffixing(bool $enabledSuffixing)
+	{
+		$this->enabledSuffixing = $enabledSuffixing;
 
 		return $this;
 	}

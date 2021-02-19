@@ -72,14 +72,8 @@ class FeatureResponse extends TestCase
 		{
 			return false;
 		}
-
 		// Empty bodies are not considered valid, unless in redirects
-		if ($status < 300 && empty($this->response->getBody()))
-		{
-			return false;
-		}
-
-		return true;
+		return ! ($status < 300 && empty($this->response->getBody()));
 	}
 
 	/**
@@ -258,7 +252,7 @@ class FeatureResponse extends TestCase
 	public function assertCookieExpired(string $key, string $prefix = '')
 	{
 		$this->assertTrue($this->response->hasCookie($key, null, $prefix));
-		$this->assertGreaterThan(time(), $this->response->getCookie($key, $prefix)['expires']);
+		$this->assertGreaterThan(time(), $this->response->getCookie($key, $prefix)->getExpiresTimestamp());
 	}
 
 	//--------------------------------------------------------------------
